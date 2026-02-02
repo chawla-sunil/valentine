@@ -209,7 +209,7 @@
             transform: scale(1.05);
         }
 
-        /* No button - BLACK - starts in normal position */
+        /* No button - BLACK */
         .btn-no {
             background: linear-gradient(135deg, #333 0%, #111 100%);
             color: white;
@@ -220,7 +220,7 @@
             font-weight: 600;
             border-radius: 50px;
             cursor: pointer;
-            transition: left 0.5s ease, top 0.5s ease, transform 0.2s ease;
+            transition: transform 0.5s ease;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
             z-index: 50;
             white-space: nowrap;
@@ -228,11 +228,6 @@
 
         .btn-no:hover {
             background: linear-gradient(135deg, #444 0%, #222 100%);
-        }
-
-        /* When No button starts moving */
-        .btn-no.runaway {
-            position: fixed;
         }
 
         /* Angry warning popup */
@@ -544,12 +539,11 @@
 
         createFloatingHearts();
 
-        // Runaway No button
+        // Runaway No button - simple left/right movement
         const noBtn = document.getElementById('noBtn');
         const angryWarning = document.getElementById('angryWarning');
         let hoverCount = 0;
-        let currentX = null;
-        let currentY = null;
+        let moveDirection = 1; // 1 = right, -1 = left
 
         const angryMessages = [
             "Why would you even think about clicking No?! 💔",
@@ -563,62 +557,49 @@
         ];
 
         function moveNoButton(event) {
-            const btnWidth = noBtn.offsetWidth;
-            const btnHeight = noBtn.offsetHeight;
-            
-            // Get current button position
-            const rect = noBtn.getBoundingClientRect();
-            
-            // If first time, initialize current position
-            if (currentX === null) {
-                currentX = rect.left;
-                currentY = rect.top;
-            }
-            
-            // Add runaway class to make it position fixed
-            noBtn.classList.add('runaway');
-            
-            // Small random movement (50-120 pixels in random direction)
-            const moveDistance = 50 + Math.random() * 70;
-            const angle = Math.random() * Math.PI * 2; // Random direction
-            
-            let newX = currentX + Math.cos(angle) * moveDistance;
-            let newY = currentY + Math.sin(angle) * moveDistance;
-            
-            // Keep within screen bounds with padding
-            const padding = 20;
-            const maxX = window.innerWidth - btnWidth - padding;
-            const maxY = window.innerHeight - btnHeight - padding;
-            
-            // Bounce back if hitting edges
-            if (newX < padding) newX = padding + Math.random() * 50;
-            if (newX > maxX) newX = maxX - Math.random() * 50;
-            if (newY < padding) newY = padding + Math.random() * 50;
-            if (newY > maxY) newY = maxY - Math.random() * 50;
-            
-            // Clamp to ensure it stays in bounds
-            newX = Math.max(padding, Math.min(newX, maxX));
-            newY = Math.max(padding, Math.min(newY, maxY));
-            
-            // Update position
-            currentX = newX;
-            currentY = newY;
-            
-            noBtn.style.left = newX + 'px';
-            noBtn.style.top = newY + 'px';
-            
             hoverCount++;
             
-            // Show angry warning near the cursor/touch
+            // Simple left-right movement using transform (stays in place, just shifts)
+            // Move 60-100 pixels, alternating direction
+            const moveAmount = 60 + Math.random() * 40;
+            
+            // Alternate between left and right
+            moveDirection *= -1;
+            
+            // Apply transform - this keeps the button in the document flow
+            // and just visually shifts it left or right
+            const currentTransform = noBtn.style.transform;
+            let currentX = 0;
+            
+            // Parse current translateX if exists
+            const match = currentTransform.match(/translateX\((-?\d+)px\)/);
+            if (match) {
+                currentX = parseInt(match[1]);
+            }
+            
+            // Calculate new position
+            let newX = currentX + (moveAmount * moveDirection);
+            
+            // Limit movement to stay visible (max 150px in either direction)
+            if (newX > 150) {
+                newX = 150;
+                moveDirection = -1;
+            } else if (newX < -150) {
+                newX = -150;
+                moveDirection = 1;
+            }
+            
+            noBtn.style.transform = `translateX(${newX}px)`;
+            
+            // Show angry warning
             const clientX = event.clientX || (event.touches && event.touches[0].clientX) || window.innerWidth / 2;
             const clientY = event.clientY || (event.touches && event.touches[0].clientY) || window.innerHeight / 2;
             
-            angryWarning.textContent = '';
             angryWarning.textContent = angryMessages[hoverCount % angryMessages.length];
             
-            // Position warning near where they tried to click
+            // Position warning above where they tried to click
             let warningX = clientX - 140;
-            let warningY = clientY - 100;
+            let warningY = clientY - 120;
             
             // Keep warning in viewport
             warningX = Math.max(10, Math.min(warningX, window.innerWidth - 290));
@@ -639,7 +620,6 @@
             moveNoButton(e);
         });
 
-        // Click on No does nothing but move it
         noBtn.addEventListener('click', (e) => {
             e.preventDefault();
             moveNoButton(e);
@@ -650,19 +630,12 @@
             const celebration = document.getElementById('celebration');
             celebration.classList.add('active');
             
-            // Hide the No button
             noBtn.style.display = 'none';
             
-            // Create confetti
             createConfetti();
-            
-            // Create falling rose petals
             createPetals();
-            
-            // Create dancing hearts around edges
             createDancingHearts();
             
-            // Play continuous celebration
             setInterval(createPetals, 1500);
         }
 
@@ -724,7 +697,6 @@
             });
         }
 
-        // Easter egg: Clicking anywhere on celebration plays more confetti
         document.getElementById('celebration').addEventListener('click', () => {
             createConfetti();
         });
